@@ -1,0 +1,37 @@
+Field_Name|Label|Field_Type|Field_Length|Number_of_Decimals
+GEOTYPE|Type of geography flag|CHARACTER|2|0
+GEO_ID|Geographic identifier code|CHARACTER|30|0
+GEO_LABEL|Geographic Area Name|CHARACTER|255|0
+GEO_ID_F|Geo Footnote|CHARACTER|4|0
+SECTOR|NAICS economic sector|CHARACTER|2|0
+INDLEVEL|Industry level|NUMBER|1|0
+NAICS2022|2022 NAICS code|CHARACTER|8|0
+NAICS2022_LABEL|Meaning of 2022 NAICS code|CHARACTER|255|0
+NAICS2022_F|2022 NAICS Footnote|CHARACTER|4|0
+TYPOP|Type of operation code|CHARACTER|2|0
+TYPOP_LABEL|Meaning of TYPOP|CHARACTER|255|0
+CONCENFI|Firm concentration code|CHARACTER|3|0
+CONCENFI_LABEL|Meaning of CONCENFI|CHARACTER|255|0
+YEAR|Year|CHARACTER|4|0
+FIRM|Number of firms|NUMBER|10|0
+FIRM_F|Flag for number of firms|CHARACTER|1|0
+ESTAB|Number of establishments|NUMBER|10|0
+ESTAB_F|Flag for number of establishments|CHARACTER|1|0
+RCPTOT|Sales, value of shipments, or revenue ($1,000)|NUMBER|11|0
+RCPTOT_F|Flag for sales, value of shipments, or revenue|CHARACTER|1|0
+PAYANN|Annual payroll ($1,000)|NUMBER|11|0
+PAYANN_F|Flag for annual payroll|CHARACTER|1|0
+PAYQTR1|First-quarter payroll ($1,000)|NUMBER|11|0
+PAYQTR1_F|Flag for first-quarter payroll|CHARACTER|1|0
+EMP|Number of employees|NUMBER|10|0
+EMP_F|Flag for number of employees|CHARACTER|1|0
+VAL_PCT|Sales, value of shipments, or revenue of largest firms as percent of total sales, value of shipments, or revenue (%)|NUMBER|10|1
+VAL_PCT_F|Flag for revenue of largest firms as percent of total revenue|CHARACTER|1|0
+HHI|Herfindahl-Hirschman Index (based on sales, value of shipments, or revenue)|NUMBER|10|1
+HHI_F|Flag for Herfindahl-Hirschman Index (based on sales, value of shipments, or revenue)|CHARACTER|1|0
+RCPTOT_IMP|Range indicating imputed percentage of total sales, value of shipments, or revenue|NUMBER|10|0
+RCPTOT_IMP_F|Flag for range indicating imputed percentage of total sales, value of shipments, or revenue|CHARACTER|1|0
+PAYANN_IMP|Range indicating imputed percentage of total annual payroll|NUMBER|10|0
+PAYANN_IMP_F|Flag for range indicating imputed percentage of total annual payroll|CHARACTER|1|0
+EMP_IMP|Range indicating imputed percentage of total employees|NUMBER|10|0
+EMP_IMP_F|Flag for range indicating imputed percentage of total employees|CHARACTER|1|0
