@@ -25,12 +25,12 @@ suppressPackageStartupMessages({
   library(readr)
   library(tidyr)
   library(knitr)
+  library(here)
 })
 
 # -------------------------
 # Paths
 # -------------------------
-library(here)
 
 DATA_CLEAN <- here("data", "clean")
 OUTPUT_DIR <- here("output", "appendix", "tables")

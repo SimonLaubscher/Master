@@ -30,13 +30,13 @@ suppressPackageStartupMessages({
   library(readr)
   library(knitr)
   library(kableExtra)
+  library(here)
 })
 
 # ============================================================
 # 0) Paths
 # ============================================================
 
-library(here)
 
 DATA_CLEAN <- here("data", "clean")
 OUT_FIG    <- here("output", "figures")
@@ -48,10 +48,7 @@ dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 EU_TOTAL_RDS  <- file.path(DATA_CLEAN, "klems_clean_total.rds")
 US_REAGG_PATH <- file.path(DATA_CLEAN, "us_TOTIND_exgov_growth.csv")
 
-stopifnot(
-  file.exists(EU_TOTAL_RDS),
-  file.exists(US_REAGG_PATH)
-)
+
 # ============================================================
 # 1) Settings
 # ============================================================

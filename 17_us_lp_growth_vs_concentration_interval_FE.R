@@ -53,6 +53,7 @@ suppressPackageStartupMessages({
   library(broom)
   library(cli)
   library(knitr)
+  library(here)
 })
 
 
@@ -61,7 +62,6 @@ suppressPackageStartupMessages({
 # 0) Paths
 # ============================================================
 
-library(here)
 
 DATA_CLEAN <- here("data", "clean")
 PANEL_US   <- here("data", "clean", "panel_us")
@@ -77,8 +77,9 @@ dir.create(OUT_APP_TAB, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_DIA, recursive = TRUE, showWarnings = FALSE)
 
 PATH_IN <- file.path(PANEL_US, "panel_US_main_cr4_balanced_2002_2022.csv")
-
-stopifnot(file.exists(PATH_IN))
+if (!file.exists(PATH_IN)) {
+  stop("Input file not found: ", PATH_IN)
+}
 # -----------------------------
 # Settings
 # -----------------------------
@@ -570,3 +571,9 @@ tab_lines <- tab_lines[
 ]
 
 writeLines(tab_lines, TEX_TABULAR_MAIN)
+
+cat("\n✓ Script 17 complete. Outputs saved to:\n")
+cat(normalizePath(OUT_TAB, winslash = "/"), "\n", sep = "")
+cat(normalizePath(OUT_APP_TAB, winslash = "/"), "\n", sep = "")
+cat(normalizePath(OUT_FIG, winslash = "/"), "\n", sep = "")
+cat(normalizePath(OUT_DIA, winslash = "/"), "\n", sep = "")

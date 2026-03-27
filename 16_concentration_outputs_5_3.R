@@ -36,13 +36,15 @@ suppressPackageStartupMessages({
   library(readr)
   library(tidyr)
   library(ggplot2)
+  library(knitr)
+  library(kableExtra)
+  library(here)
 })
 
 # ============================================================
 # 0) Paths
 # ============================================================
 
-library(here)
 
 DATA_CLEAN <- here("data", "clean")
 OUT_DIR    <- here("output")
@@ -54,6 +56,9 @@ dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 
 EU_FILE <- file.path(DATA_CLEAN, "compnet_hybrid_annual.csv")
 US_FILE <- file.path(DATA_CLEAN, "census_concentration_panel_2002_2022.csv")
+
+if (!file.exists(EU_FILE)) stop("Input file not found: ", EU_FILE)
+if (!file.exists(US_FILE)) stop("Input file not found: ", US_FILE)
 
 # ============================================================
 # 1) Settings
@@ -501,3 +506,7 @@ kable(
   col.names = c("Country", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020")
 ) %>%
   cat(file = file.path(OUT_TAB, "tab_A4b_coverage_2012_2020.tex"))
+
+cat("\n✓ Script 16 complete. Concentration outputs saved to:\n")
+cat(normalizePath(OUT_TAB, winslash = "/"), "\n", sep = "")
+cat(normalizePath(OUT_FIG, winslash = "/"), "\n", sep = "")

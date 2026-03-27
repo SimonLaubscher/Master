@@ -6,7 +6,7 @@
 #   European industries across ICT-producing, ICT-using, Other,
 #   and ICT baseline missing groups.
 #
-# Input (dataclean/):
+# Input (data/clean/):
 #   ICT_classification_check_C26_ONLY_1997baseline.csv
 #
 # Outputs (output/tables/):
@@ -24,9 +24,12 @@ suppressPackageStartupMessages({
   library(readr)
   library(tidyr)
   library(knitr)
+  library(here)
 })
 
-library(here)
+# ------------------------------------------------------------
+# Paths
+# ------------------------------------------------------------
 
 DATA_CLEAN <- here("data", "clean")
 OUTPUT_DIR <- here("output", "appendix", "tables")

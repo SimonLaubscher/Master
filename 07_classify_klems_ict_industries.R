@@ -30,13 +30,14 @@
 suppressPackageStartupMessages({
   library(dplyr)
   library(readr)
+  library(here)
 })
 
 # ------------------------------------------------------------
 # Paths
 # ------------------------------------------------------------
 
-library(here)
+
 
 DATA_CLEAN <- here("data", "clean")
 
@@ -76,7 +77,7 @@ if (length(miss) > 0) {
   stop(
     "Missing required variables in input RDS: ",
     paste(miss, collapse = ", "),
-    "\nRun 02_clean_klems_prepare.R first."
+    "\nRun 05_clean_klems_prepare.R first."
   )
 }
 

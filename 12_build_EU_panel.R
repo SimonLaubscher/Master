@@ -40,12 +40,12 @@ suppressPackageStartupMessages({
   library(stringr)
   library(tidyr)
   library(purrr)
+  library(here)
 })
 
 # ----------------------------
 # Paths
 # ----------------------------
-library(here)
 
 DATA_CLEAN <- here("data", "clean")
 OUT_DIR    <- file.path(DATA_CLEAN, "panel_eu")

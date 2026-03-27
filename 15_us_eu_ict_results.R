@@ -35,13 +35,13 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(knitr)
   library(kableExtra)
+  library(here)
 })
 
 # ============================================================
 # 0) Paths
 # ============================================================
 
-library(here)
 
 DATA_CLEAN <- here("data", "clean")
 OUT_DIR    <- here("output")
@@ -273,7 +273,7 @@ top5_full <- df %>%
 
 write_csv(
   top5_full,
-  file.path(OUT_TAB, "13_top5_industries_lp_growth_full.csv")
+  file.path(OUT_TAB, "15_top5_industries_lp_growth_full.csv")
 )
 
 
@@ -323,7 +323,7 @@ top5_full_tex <- gsub("\nSweden &",  "\n\\\\addlinespace[0.5em]\nSweden &",  top
 
 writeLines(
   top5_full_tex,
-  file.path(OUT_TAB, "13_top5_industries_lp_growth_full.tex")
+  file.path(OUT_TAB, "15_top5_industries_lp_growth_full.tex")
 )
 
 
@@ -358,7 +358,7 @@ top5_period <- df %>%
 # Save CSV
 write_csv(
   top5_period,
-  file.path(OUT_TAB, "13_top5_industries_lp_growth_by_period.csv")
+  file.path(OUT_TAB, "15_top5_industries_lp_growth_by_period.csv")
 )
 
 # Safe file names
@@ -424,7 +424,7 @@ for (ctry in country_order) {
     one_country_tex,
     file.path(
       OUT_TAB,
-      paste0("13_top5_industries_lp_growth_by_period_", country_file_map[[ctry]], ".tex")
+      paste0("15_top5_industries_lp_growth_by_period_", country_file_map[[ctry]], ".tex")
     )
   )
 }
@@ -461,7 +461,7 @@ lp_group_period <- lp_group_year %>%
 
 write_csv(
   lp_group_period,
-  file.path(OUT_TAB, "13_lp_growth_by_ict_group_period.csv")
+  file.path(OUT_TAB, "15_lp_growth_by_ict_group_period.csv")
 )
 
 tab_ict_lp_wide <- lp_group_period %>%
@@ -488,7 +488,7 @@ tab_ict_lp_wide <- lp_group_period %>%
 
 write_csv(
   tab_ict_lp_wide,
-  file.path(OUT_TAB, "13_lp_growth_by_ict_group_period_wide.csv")
+  file.path(OUT_TAB, "15_lp_growth_by_ict_group_period_wide.csv")
 )
 
 tab_ict_lp_latex <- tab_ict_lp_wide %>%
@@ -523,7 +523,7 @@ tex_ict_lp <- knitr::kable(
 
 writeLines(
   as.character(tex_ict_lp),
-  file.path(OUT_TAB, "13_lp_growth_by_ict_group_period.tex")
+  file.path(OUT_TAB, "15_lp_growth_by_ict_group_period.tex")
 )
 
 
@@ -563,7 +563,7 @@ if (nrow(valid_contrib) == 0) {
 }
 write_csv(
   contrib_group_period,
-  file.path(OUT_TAB, "13_ict_contribution_by_group_period.csv")
+  file.path(OUT_TAB, "15_ict_contribution_by_group_period.csv")
 )
 
 tab_ict_contrib_wide <- contrib_group_period %>%
@@ -590,7 +590,7 @@ tab_ict_contrib_wide <- contrib_group_period %>%
 
 write_csv(
   tab_ict_contrib_wide,
-  file.path(OUT_TAB, "13_ict_contribution_by_group_period_wide.csv")
+  file.path(OUT_TAB, "15_ict_contribution_by_group_period_wide.csv")
 )
 
 tab_ict_contrib_latex <- tab_ict_contrib_wide %>%
@@ -625,7 +625,7 @@ tex_ict_contrib <- knitr::kable(
 
 writeLines(
   as.character(tex_ict_contrib),
-  file.path(OUT_TAB, "13_ict_contribution_by_group_period.tex")
+  file.path(OUT_TAB, "15_ict_contribution_by_group_period.tex")
 )
 # ============================================================
 # 7) Final checks and completion message
@@ -655,6 +655,6 @@ print(
 
 cat("\nUS ICT contribution variable available: ", has_us_it_contrib, "\n", sep = "")
 
-cat("\n✓ Script 13 complete. Outputs saved to:\n")
+cat("\n✓ Script 15 complete. Outputs saved to:\n")
 cat(normalizePath(OUT_TAB, winslash = "/"), "\n", sep = "")
 cat(normalizePath(OUT_FIG, winslash = "/"), "\n", sep = "")

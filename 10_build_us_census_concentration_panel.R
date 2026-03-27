@@ -391,7 +391,7 @@ extract_metrics <- function(df) {
   # Receipts column used later as aggregation weight
   tot_cols <- choose_totals_cols(df)
   rcpt_col <- tot_cols$RCPTOT_col
-  cli::cli_alert_info("Receipts column used: {rcpt_col}") #can delet later
+  cli::cli_alert_info("Receipts column used: {rcpt_col}") 
   
   # Extract CR4 / CR8
   crs <- tmp %>%

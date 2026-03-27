@@ -21,13 +21,14 @@ suppressPackageStartupMessages({
   library(readr)
   library(stringr)
   library(rlang)
+  library(here)
 })
 
 # ------------------------------------------------
 # Paths
 # ------------------------------------------------
 
-library(here)
+
 
 DATA_CLEAN <- here("data", "clean")
 

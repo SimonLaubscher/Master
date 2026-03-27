@@ -36,13 +36,13 @@ suppressPackageStartupMessages({
   library(readr)
   library(cli)
   library(knitr)
+  library(here)
 })
 
 # ============================================================
 # 0) PATHS
 # ============================================================
 
-library(here)
 
 DATA_CLEAN   <- here("data", "clean")
 PANEL_EU_DIR <- file.path(DATA_CLEAN, "panel_eu")
@@ -169,4 +169,4 @@ cat(
   file = file.path(OUT_DIR, "Table_3_1_analysis_panels.tex")
 )
 
-cli::cli_alert_success("✓ Table 3.1 exported to outputs/tables/")
+cli::cli_alert_success("✓ Table 3.1 exported to output/tables/")

@@ -37,13 +37,13 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(stringr)
   library(readr)
+  library(here)
 })
 
 # -------------------------
 # Paths
 # -------------------------
 
-library(here)
 
 DATA_RAW   <- here("data", "raw")
 DATA_CLEAN <- here("data", "clean")

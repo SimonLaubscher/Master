@@ -40,12 +40,13 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(stringr)
   library(cli)
+  library(here)
 })
 
 # ----------------------------
 # Paths
 # ----------------------------
-library(here)
+
 
 DATA_CLEAN <- here("data", "clean")
 OUT_DIR    <- here("data", "clean", "panel_us")
@@ -249,7 +250,6 @@ if (nrow(missing_map) > 0) {
 }
 # ------------------------------------------------------------
 # Clarify consequence of unmapped industries
-# (informational only – can be deleted after verification)
 # ------------------------------------------------------------
 if (nrow(missing_map) > 0) {
   cli::cli_alert_info(
@@ -386,3 +386,5 @@ print(
     ),
   n = Inf
 )
+
+cli::cli_alert_success("✓ Script 11 complete: U.S. full and balanced panels saved.")

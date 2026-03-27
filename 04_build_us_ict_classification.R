@@ -31,13 +31,14 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(readr)
   library(stringr)
+  library(here)
 })
 
 # ------------------------------------------------
 # Paths
 # ------------------------------------------------
 
-library(here)
+
 
 DATA_RAW   <- here("data", "raw")
 DATA_CLEAN <- here("data", "clean")
