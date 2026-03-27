@@ -16,9 +16,13 @@
 #   - Panel remains at native NAICS_len (2–8); no aggregation here.
 #   - Keeps US total + all establishments/all firms only.
 #   - Concentration measures are receipts-based.
+#   - Source files include both Excel (2002–2012) and pipe-delimited
+#     Census extracts (2017, 2022).
+#   - Some non-numeric flags in raw data (e.g. "D", "k") are handled
+#     via numeric coercion and do not affect the final measures.
 #
 # Output:
-#   dataclean/census_concentration_panel_2002_2022.csv
+#   data/clean/census_concentration_panel_2002_2022.csv
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -34,27 +38,23 @@ suppressPackageStartupMessages({
 })
 
 # ---- Paths ----
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
-DATA_RAW   <- file.path(ROOT, "dataraw")
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+DATA_RAW   <- here("data", "raw")
+DATA_CLEAN <- here("data", "clean")
 
 dir.create(DATA_CLEAN, showWarnings = FALSE, recursive = TRUE)
-
-cli::cli_alert_success("Using replication root: {ROOT}")
 
 # ---- File paths ----
 file02_xlsx <- file.path(DATA_RAW, "Daten Census 2002.xlsx")
 file07_xlsx <- file.path(DATA_RAW, "Daten Census 2007.xlsx")
 file12_xlsx <- file.path(DATA_RAW, "Daten Census 2012.xlsx")
-file17_dat  <- file.path(DATA_RAW, "EC1700SIZECONCEN", "EC1700SIZECONCEN.dat")
-file22_dat  <- file.path(DATA_RAW, "EC2200SIZECONCEN", "EC2200SIZECONCEN.dat")
+file17_dat  <- file.path(DATA_RAW, "EC1700SIZECONCEN.dat")
+file22_dat  <- file.path(DATA_RAW, "EC2200SIZECONCEN.dat")
 
 if (!file.exists(file02_xlsx)) stop("Input file not found: ", file02_xlsx)
 if (!file.exists(file07_xlsx)) stop("Input file not found: ", file07_xlsx)
 if (!file.exists(file12_xlsx)) stop("Input file not found: ", file12_xlsx)
 if (!file.exists(file17_dat))  stop("Input file not found: ", file17_dat)
 if (!file.exists(file22_dat))  stop("Input file not found: ", file22_dat)
-
 
 # ============================================================
 # GENERIC HELPERS
@@ -231,64 +231,11 @@ prep_naics <- function(df, naics_col, keep_levels = 2:8,
 }
 
 
-
-# ----------------- NAICS handling (replication version) -----------------
-#prep_naics <- function(df, naics_col, keep_levels = 2:8,
-#                       require_us = TRUE, require_all_est = TRUE) 
-#{
-# df1 <- df
-# 
-# if (require_us)
-#   df1 <- df1[is_us_row(df1), , drop = FALSE]
-# 
-# if (require_all_est)
-#   df1 <- df1[is_all_est_row(df1), , drop = FALSE]
-# 
-# df1 %>%
-#   mutate(
-#     
-#     # Clean NAICS code
-#     NAICS_raw = str_squish(as.character(.data[[naics_col]])),
-#     
-#     # Detect sector ranges used in NAICS
-#     is_sector_range = str_detect(NAICS_raw, "^(31-33|44-45|48-49)$"),
-#     
-#     # Remove non-digits
-#     NAICS_digits = str_remove_all(NAICS_raw, "[^0-9]"),
-#     
-#     # Final industry key
-#     NAICS_key = if_else(
-#       is_sector_range,
-#       NAICS_raw,
-#       NAICS_digits
-#     ),
-#     
-#     # Number of digits / industry level
-#     NAICS_len = if_else(
-#       is_sector_range,
-#       2L,
-#      nchar(NAICS_digits)
-#    )
-#   ) %>%
-#   filter(!is.na(NAICS_len), NAICS_len %in% keep_levels)
-#}
-
-
 # ---- Pick receipts column used later as aggregation weight ----
+
 choose_totals_cols <- function(df) {
-  
-  nm <- names(df)
+  list(RCPTOT_col = "RCPTOT")
 }
-  
-  pick_first <- function(cands) {
-    cands <- cands[cands %in% nm]
-    if (!length(cands)) return(NA_character_)
-    cands[1]
-  }
-  
-  choose_totals_cols <- function(df) {
-    list(RCPTOT_col = "RCPTOT")
-  }
 
 # Map Census concentration codes to CR4 / CR8
 map_con_metric <- function(df){
@@ -689,18 +636,5 @@ cli::cli_alert_info(
 if (nrow(rcpt_var) > 0) print(head(rcpt_var, 20))
 
 cli::cli_alert_success("✓ Sanity checks complete.")
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

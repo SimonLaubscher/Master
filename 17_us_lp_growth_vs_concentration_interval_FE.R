@@ -2,9 +2,9 @@
 # 17_us_lp_growth_vs_concentration_interval_FE.R
 # ------------------------------------------------------------
 # Purpose:
-# Estimate the relationship between market concentration and
-# labor productivity growth in the United States using the
-# main balanced industry sample and Census-to-Census intervals.
+#   Estimate the relationship between market concentration and
+#   labor productivity growth in the United States using a
+#   balanced industry panel and Census-to-Census intervals.
 #
 # This script:
 #   - loads the main balanced US panel from Script 11
@@ -17,8 +17,6 @@
 #     interval productivity growth on changes in CR4
 #   - examines heterogeneity by ICT-using status and baseline
 #     ICT intensity
-#   - estimates a robustness specification using the level of
-#     CR4 at the start of the interval
 #   - exports figures, tables, and LaTeX regression output
 #
 # Main specification:
@@ -30,17 +28,19 @@
 #       industry and Census-interval period fixed effects
 #
 # Input:
-#   - dataclean/panel_us/panel_US_main_cr4_balanced_2002_2022.csv
+#   - data/clean/panel_us/panel_US_main_cr4_balanced_2002_2022.csv
 #
 # Outputs:
-#   - outputs/chapter5_us/figures/
-#   - outputs/chapter5_us/tables/
+#   - output/figures/
+#   - output/tables/
+#   - output/appendix/tables/
+#   - output/diagnostics/
 #
 # Notes:
 #   - Annual descriptives use lp_g in Census years only.
-#   - The main FE specification uses Census-to-Census intervals
-#     because CR4 is observed only in Census years.
-#   - CR4 is scaled to shares (0-1) in the estimation code.
+#   - The FE specification uses Census-to-Census intervals,
+#     matching the frequency of CR4 data.
+#   - CR4 is measured in percent (0–100).
 #   - Results are descriptive and do not imply causality.
 # ============================================================
 
@@ -52,33 +52,33 @@ suppressPackageStartupMessages({
   library(fixest)
   library(broom)
   library(cli)
+  library(knitr)
 })
 
 
-# -----------------------------
-# Paths
-# -----------------------------
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
-PANEL_US   <- file.path(DATA_CLEAN, "panel_us")
+# ============================================================
+# 0) Paths
+# ============================================================
 
-OUT_DIR <- file.path(ROOT, "outputs", "chapter5_us")
-OUT_FIG <- file.path(OUT_DIR, "figures")
-OUT_TAB <- file.path(OUT_DIR, "tables")
+library(here)
+
+DATA_CLEAN <- here("data", "clean")
+PANEL_US   <- here("data", "clean", "panel_us")
+
+OUT_FIG <- here("output", "figures")
+OUT_TAB <- here("output", "tables")
+OUT_APP_TAB <- here("output", "appendix", "tables")
+OUT_DIA <- here("output", "diagnostics")
 
 dir.create(OUT_FIG, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_APP_TAB, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_DIA, recursive = TRUE, showWarnings = FALSE)
 
 PATH_IN <- file.path(PANEL_US, "panel_US_main_cr4_balanced_2002_2022.csv")
 
-if (!file.exists(PATH_IN)) {
-  stop(
-    "Missing US main panel: ", PATH_IN,
-    "\nRun 11_build_us_panel.R first."
-  )
-}
-
+stopifnot(file.exists(PATH_IN))
 # -----------------------------
 # Settings
 # -----------------------------
@@ -91,7 +91,7 @@ CR_VAR        <- "CR4"                   # main concentration measure
 ICT_BASE_VAR  <- "ICT_intensity_base"    # continuous baseline ICT intensity
 ICT_GROUP_VAR <- "ICT_group_baseline"    # categorical baseline ICT group
 
-SCALE_CR_TO_SHARE <- TRUE                # convert CR4 from percent (0-100) to share (0-1)
+
 
 # -----------------------------
 # Load data
@@ -122,13 +122,7 @@ p <- p %>%
     ICT_group    = as.character(ICT_group_baseline)
   )
 
-if (SCALE_CR_TO_SHARE) {
-  p <- p %>%
-    mutate(
-      CR4 = CR4 / 100,
-      CR8 = CR8 / 100
-    )
-}
+
 
 # -----------------------------
 # ICT classification + analysis samples
@@ -188,7 +182,7 @@ cli::cli_h1("A) Descriptive correlations (Census years)")
 p_cy_plot <- p_desc %>%
   filter(year %in% CENSUS_YEARS) %>%
   mutate(
-    CR4_pct   = 100 * CR4,     # CR4 in percent
+    CR4_pct   =  CR4,          # CR4 in percent
     lp_g_pct  = 100 * lp_g,    # labor productivity growth in percent
     ICT_group = factor(ICT_group, levels = c("ICT-using", "Other"))
   )
@@ -215,9 +209,9 @@ p_scatter <- ggplot(p_cy_plot, aes(x = CR4_pct, y = lp_g_pct, color = ICT_group)
   
   # Labels
   labs(
-    x = "CR4 (percent)",
-    y = "Annual labor productivity growth (percent)",
-    color = "Industry type"
+    x = "CR4 (%)",
+    y = "Annual labor productivity growth (%)",
+    color = NULL
   ) +
   
   # Optional: keep only if you want fixed colors across figures
@@ -230,7 +224,7 @@ p_scatter <- ggplot(p_cy_plot, aes(x = CR4_pct, y = lp_g_pct, color = ICT_group)
   theme(
     legend.position = "bottom",
     legend.title = element_text(size = 11),
-    legend.text = element_text(size = 10)
+    legend.text = element_text(size = 11)
   )
 
 ggsave(
@@ -255,10 +249,6 @@ ggsave(
 
 
 
-
-library(dplyr)
-library(tidyr)
-library(knitr)
 
 # ------------------------------------------------------------
 # Correlations by year and ICT group
@@ -346,7 +336,7 @@ latex_code <- kable(
   align = c("l", "c", "c", "c")
 )
 
-writeLines(latex_code, file.path(OUT_TAB, "tab_A5_us_corr_by_year_ictgroup.tex"))
+writeLines(latex_code, file.path(OUT_APP_TAB, "tab_A5_us_corr_by_year_ictgroup.tex"))
 
 
 
@@ -368,7 +358,6 @@ fig_cr4_group <- p %>%
     .groups = "drop"
   ) %>%
   mutate(
-    mean_CR4 = 100 * mean_CR4,
     ICT_group = factor(ICT_group, levels = c("ICT-using", "Other"))
   ) %>%
   ggplot(aes(x = year, y = mean_CR4, color = ICT_group, group = ICT_group)) +
@@ -380,14 +369,14 @@ fig_cr4_group <- p %>%
   scale_x_continuous(breaks = CENSUS_YEARS) +
   labs(
     x = "Census year",
-    y = "Mean CR4 (percent)",
-    color = "Industry type"
+    y = "Mean CR4 (%)",
+    color = NULL
   ) +
   theme_minimal(base_size = 12) +
   theme(
     legend.position = "bottom",
     legend.title = element_text(size = 11),
-    legend.text = element_text(size = 10)
+    legend.text = element_text(size = 11)
   )
 
 ggsave(
@@ -404,7 +393,7 @@ ggsave(
 
 
 # ============================================================
-# Appendix Table: Mean CR4 by industry type and Census year
+# # Diagnostic table:Mean CR4 by industry type and Census year
 # ============================================================
 
 tab_cr4_appendix <- p %>%
@@ -413,9 +402,6 @@ tab_cr4_appendix <- p %>%
   summarise(
     mean_CR4 = mean(CR4, na.rm = TRUE),
     .groups = "drop"
-  ) %>%
-  mutate(
-    mean_CR4 = if (SCALE_CR_TO_SHARE) mean_CR4 * 100 else mean_CR4  # back to %
   ) %>%
   tidyr::pivot_wider(
     names_from = ICT_group,
@@ -426,7 +412,7 @@ tab_cr4_appendix <- p %>%
 
 readr::write_csv(
   tab_cr4_appendix,
-  file.path(OUT_TAB, "tab_us_mean_cr4_by_group_census_years.csv")
+  file.path(OUT_DIA, "tab_us_mean_cr4_by_group_census_years.csv")
 )
 
 
@@ -435,21 +421,21 @@ kable(tab_cr4_appendix,
       digits = 1, 
       booktabs = TRUE, 
       escape = FALSE) %>%
-  cat(file = file.path(OUT_TAB, "tab_A5us_mean_cr4_by_group_census_years.tex"))
+  cat(file = file.path(OUT_DIA, "tab_A5us_mean_cr4_by_group_census_years.tex"))
 
 
 # ============================================================
-# B) Main US FE: Census‑to‑Census interval panel (only tabular)
+# B) Main US FE: Census-to-Census interval panel (only tabular)
 # ============================================================
-cli::cli_h1("B) Main: Interval FE (Census‑to‑Census) - tabular only")
+cli::cli_h1("B) Main: Interval FE (Census-to-Census) - tabular only")
 
 # Check that lp_index is positive before taking logs
 min_lp <- min(p_fe$lp_index, na.rm = TRUE)
 if (!is.finite(min_lp) || min_lp <= 0) {
-  stop("lp_index contains non‑positive values; cannot take logs safely. min(lp_index) = ", min_lp)
+  stop("lp_index contains non-positive values; cannot take logs safely. min(lp_index) = ", min_lp)
 }
 
-# Construct 5‑year intervals
+# Construct 5-year intervals
 df_int <- p_fe %>%
   arrange(industry_key, year) %>%
   group_by(industry_key) %>%
@@ -459,18 +445,18 @@ df_int <- p_fe %>%
     lp_lead     = lead(lp_index),
     CR4_start   = CR4,
     CR4_end     = lead(CR4),
-    # 5‑year log growth (annualized)
+    # 5-year log growth (annualized)
     lp_g_5y     = (log(lp_lead) - log(lp_index)) / 5,
     # Change in CR4 over interval
     d_CR4_5y    = CR4_end - CR4_start,
-    # Period label (e.g., "2002–2007")
+    # Period label (e.g., "2002-2007")
     period      = paste0(year, "-", year_lead)
   ) %>%
   ungroup()
 
 # Ensure all intervals are exactly 5 years
 if (any(df_int$gap != 5, na.rm = TRUE)) {
-  stop("Non‑5‑year interval detected in Census panel.")
+  stop("Non-5-year interval detected in Census panel.")
 }
 
 # Keep only valid intervals
@@ -489,14 +475,14 @@ cli::cli_alert_info(
   "Interval sample: rows={nrow(df_int)} industries={n_distinct(df_int$industry_key)} periods={n_distinct(df_int$period)}"
 )
 
-# Main fixed‑effects specifications
+# Main fixed-effects specifications
 int1 <- feols(
   lp_g_5y ~ d_CR4_5y | industry_key + period,
   data = df_int,
   vcov = ~industry_key
 )
 
-# Interaction with ICT‑using dummy
+# Interaction with ICT-using dummy
 int3 <- feols(
   lp_g_5y ~ d_CR4_5y + d_CR4_5y:ICT_using_dummy | industry_key + period,
   data = df_int,
@@ -519,12 +505,12 @@ print(
     dict = c(
       "d_CR4_5y" = "Δ CR4",
       "d_CR4_5y:ICT_base" = "Δ CR4 × ICT intensity",
-      "d_CR4_5y:ICT_using_dummy" = "Δ CR4 × ICT‑using"
+      "d_CR4_5y:ICT_using_dummy" = "Δ CR4 × ICT-using"
     ),
     headers = c(
       "INT1" = "Baseline",
-      "INT3" = "ICT‑using",
-      "INT2" = "ICT intensity"
+      "INT2" = "ICT-using",
+      "INT3" = "ICT intensity"
     )
   )
 )
@@ -532,7 +518,7 @@ print(
 # Tidy regression results (for CSV)
 tab_int_main <- bind_rows(
   tidy(int1) %>% mutate(model = "Baseline"),
-  tidy(int3) %>% mutate(model = "ICT‑using"),
+  tidy(int3) %>% mutate(model = "ICT-using"),
   tidy(int2) %>% mutate(model = "ICT intensity")
 ) %>%
   select(model, term, estimate, std.error, statistic, p.value)
@@ -549,69 +535,38 @@ fixest::etable(
   replace = TRUE,
   se.below = TRUE,
   digits = 4,
+  depvar = FALSE,
+  notes = "",
   dict = c(
     "d_CR4_5y" = "$\\Delta$ CR4",
     "d_CR4_5y:ICT_base" = "$\\Delta$ CR4 $\\times$ ICT intensity",
-    "d_CR4_5y:ICT_using_dummy" = "$\\Delta$ CR4 $\\times$ ICT‑using"
+    "d_CR4_5y:ICT_using_dummy" = "$\\Delta$ CR4 $\\times$ ICT-using",
+    "industry_key" = "Industry",
+    "period" = "Period"
   ),
   fitstat = c("n", "r2", "wr2"),
   headers = c(
     "INT1" = "Baseline",
-    "INT3" = "ICT‑using",
-    "INT2" = "ICT intensity"
+    "INT2" = "ICT-using",
+    "INT3" = "ICT intensity"
   )
 )
 
+tab_lines <- readLines(TEX_TABULAR_MAIN)
 
-cli::cli_alert_success("Saved LaTeX tabular (main interval): {TEX_TABULAR_MAIN}")
-
-
-
-
-
-# ============================================================
-# C) Appendix robustness: CR4 level at start of interval (tabular only)
-# ============================================================
-cli::cli_h1("C) Appendix robustness: CR4 level at start of interval - tabular only")
-
-# Level of CR4 at start of interval
-rob1 <- feols(
-  lp_g_5y ~ CR4_start | industry_key + period,
-  data = df_int,
-  vcov = ~industry_key
+# Replace dependent variable label
+tab_lines <- gsub(
+  "lp\\\\_g\\\\_5y",
+  "Annual labor productivity growth (5-year intervals)",
+  tab_lines
 )
 
-# Interaction with ICT baseline intensity
-rob2 <- feols(
-  lp_g_5y ~ CR4_start + CR4_start:ICT_base | industry_key + period,
-  data = df_int,
-  vcov = ~industry_key
-)
+# Remove significance legend and clustered-SE footer line
+tab_lines <- tab_lines[
+  !grepl("Signif\\. Codes", tab_lines)
+]
+tab_lines <- tab_lines[
+  !grepl("Clustered .*standard-errors in parentheses", tab_lines)
+]
 
-# Diagnostic table (for console)
-print(etable(rob1, rob2, se.below = TRUE))
-
-# Export robustness table to LaTeX (tabular only, no caption/notes)
-TEX_TABULAR_ROB_LEVEL <- file.path(OUT_TAB, "tab_us_interval_rob_level.tex")
-fixest::etable(
-  rob1, rob2,
-  se.below = TRUE,
-  digits = 3,
-  dict = c(
-    "CR4_start" = "CR4 at start of interval",
-    "CR4_start:ICT_base" = "CR4 start $\\times$ ICT intensity (baseline)"
-  ),
-  fitstat = c("n", "r2", "wr2"),
-  headers = c(
-    "ROB1" = "Level (start)",
-    "ROB2" = "Level $\\times$ ICT"
-  ),
-  tex = TRUE,
-  file = TEX_TABULAR_ROB_LEVEL,
-  replace = TRUE
-)
-
-
-cli::cli_alert_success("Saved LaTeX tabular (robustness level): {TEX_TABULAR_ROB_LEVEL}")
-cli::cli_alert_success("US interval FE script finished (tabular only).")
-
+writeLines(tab_lines, TEX_TABULAR_MAIN)

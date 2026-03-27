@@ -2,17 +2,27 @@
 # 04_build_us_ict_classification
 #
 # Purpose:
-# Build ICT intensity measures and classify US ILPA industries
-# into:
-#   - ICT-producing (NAICS3 = 334)
-#   - ICT-using vs Other (median split of ICT intensity)
+# Construct ICT intensity measures and classify U.S. ILPA industries
+# into ICT-producing, ICT-using, and Other industries.
+#
+# Classification:
+# - ICT-producing: industries mapped to NAICS 334
+# - ICT-using vs Other: median split of baseline ICT intensity
 #
 # ICT intensity definition:
-# ICT capital / total capital
-# proxied using IT capital compensation in ILPA
+# ICT intensity is proxied by the share of IT capital compensation
+# in total capital compensation in ILPA.
 #
 # Baseline year: 1997
-# Industries without ICT intensity in 1997 are dropped
+# Industries without ICT intensity in 1997 are excluded from the
+# final classified panel.
+#
+# Output:
+# data/clean/us_ilpa_ICT_industry_panel_NARROW.csv
+# data/clean/US_ILPA_ICT_classification_check_NARROW.csv
+# Unit of observation:
+# - industry-year (panel file)
+# - industry (classification check file)
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -27,10 +37,10 @@ suppressPackageStartupMessages({
 # Paths
 # ------------------------------------------------
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_RAW   <- file.path(ROOT, "dataraw")
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+DATA_RAW   <- here("data", "raw")
+DATA_CLEAN <- here("data", "clean")
 
 IPA_FILE   <- file.path(DATA_RAW, "industry-production-account-capital.xlsx")
 PANEL_FILE <- file.path(DATA_CLEAN, "us_industry_productivity_panel.csv")
@@ -39,9 +49,14 @@ NAICS_FILE <- file.path(DATA_CLEAN, "us_ilpa_naics_map_long.csv")
 OUT_DIR <- DATA_CLEAN
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
-if (!file.exists(IPA_FILE)) stop("IPA file not found: ", IPA_FILE)
-if (!file.exists(PANEL_FILE)) stop("Panel file not found: ", PANEL_FILE)
-if (!file.exists(NAICS_FILE)) stop("NAICS file not found: ", NAICS_FILE)
+# Check required inputs
+required_files <- c(IPA_FILE, PANEL_FILE, NAICS_FILE)
+
+missing_files <- required_files[!file.exists(required_files)]
+
+if (length(missing_files) > 0) {
+  stop("Missing required input files:\n", paste(missing_files, collapse = "\n"))
+}
 
 # ------------------------------------------------
 # Settings
@@ -165,7 +180,13 @@ us_panel_ict <- us_panel %>%
   mutate(
     ICT_producing = industry_key %in% producer_keys$industry_key
   )
+missing_ict <- us_panel_ict %>%
+  filter(is.na(ICT_share_US)) %>%
+  distinct(industry_key, industry)
 
+if (nrow(missing_ict) > 0) {
+  warning("Some industry-year observations have missing ICT intensity.")
+}
 # ------------------------------------------------
 # 5) Build 1997 baseline intensity
 # ------------------------------------------------
@@ -185,6 +206,15 @@ ind_tbl <- us_panel_ict %>%
   filter(is.finite(ICT_intensity_base))
 
 ind_class <- apply_median_split(ind_tbl)
+
+dup_class <- ind_class %>%
+  count(industry_key) %>%
+  filter(n > 1)
+
+if (nrow(dup_class) > 0) {
+  print(dup_class)
+  stop("Duplicate industry classifications detected.")
+}
 
 # ------------------------------------------------
 # 6) Merge classification back into panel

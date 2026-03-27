@@ -1,35 +1,43 @@
 # ============================================================
 # 03_build_us_lp_aggregate
+#
 # Purpose:
-# Build a US aggregate labour productivity growth series
+# Build a U.S. aggregate labor productivity growth series
 # (TOT_IND-style, excluding government) from the industry panel.
 #
 # Method:
-# - industry LP growth = annual log difference of lp_index
-# - weights = nominal value-added shares (va_level)
+# - industry labor productivity growth = annual log difference of lp_index
+# - weights = value-added shares (va_level)
 # - aggregation = Törnqvist weighting
 #
-# Main output:
-# - us_TOTIND_exgov_growth.csv
+# Output:
+# data/clean/us_TOTIND_exgov_growth.csv
+# Unit of observation: year
+# Coverage: U.S. industries (excluding government)
 # ============================================================
 
 suppressPackageStartupMessages({
   library(dplyr)
   library(readr)
   library(stringr)
+  library(rlang)
 })
 
 # ------------------------------------------------
 # Paths
 # ------------------------------------------------
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+DATA_CLEAN <- here("data", "clean")
 
 IN_FILE  <- file.path(DATA_CLEAN, "us_industry_productivity_panel.csv")
 OUT_FILE <- file.path(DATA_CLEAN, "us_TOTIND_exgov_growth.csv")
 
+# Ensure output directory exists
+dir.create(DATA_CLEAN, recursive = TRUE, showWarnings = FALSE)
+
+# Check required input
 if (!file.exists(IN_FILE)) {
   stop("Missing input file from Script 01: ", IN_FILE)
 }
@@ -102,7 +110,7 @@ us_lp <- us %>%
   ungroup()
 
 # ------------------------------------------------
-# 3) Compute nominal VA shares
+# 3) Compute value-added shares
 # ------------------------------------------------
 
 us_lp <- us_lp %>%
@@ -151,6 +159,19 @@ if (any(is.na(us_totind_lp$LP_g_TOTIND_exgov))) {
 # ------------------------------------------------
 
 write_csv(us_totind_lp, OUT_FILE)
+
+
+
+
+
+diag_agg <- us_totind_lp %>%
+  summarise(
+    n_years = n(),
+    year_min = min(year, na.rm = TRUE),
+    year_max = max(year, na.rm = TRUE)
+  )
+
+print(diag_agg)
 
 message("✓ US aggregate LP growth series built successfully.")
 message("Saved to: ", normalizePath(OUT_FILE, winslash = "/"))

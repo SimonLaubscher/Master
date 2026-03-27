@@ -1,8 +1,24 @@
 # ============================================================
 # 02_build_us_naics_crosswalk
+#
 # Purpose:
-# Attach NAICS codes to the US ILPA panel and build clean
-# NAICS crosswalk files for later merges.
+# Attach NAICS codes to the U.S. ILPA productivity panel and
+# construct a clean NAICS crosswalk for later merges.
+#
+# Description:
+# This script:
+# - reads the U.S. ILPA productivity panel from Script 01
+# - reads the NAICS codes sheet from the ILPA workbook
+# - cleans industry labels and NAICS mappings
+# - applies manual patches for industries missing NAICS codes
+# - verifies NAICS mapping coverage by merging with the ILPA panel
+# - expands NAICS mappings into long format (2–4 digit codes)
+# - exports a clean crosswalk dataset for subsequent merges
+#
+# Output:
+# data/clean/us_ilpa_naics_map_long.csv
+# Unit of observation: industry–NAICS mapping
+# Coverage: U.S. ILPA industries
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -14,19 +30,27 @@ suppressPackageStartupMessages({
 })
 
 # ------------------------------------------------
-# Paths
-# ------------------------------------------------
+# Paths 
+# ------------------------------------------------ 
+library(here)
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
-
-DATA_RAW   <- file.path(ROOT, "dataraw")
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+DATA_RAW   <- here("data", "raw")
+DATA_CLEAN <- here("data", "clean")
 
 IPA_FILE <- file.path(DATA_RAW, "industry-production-account-capital.xlsx")
 IN_FILE  <- file.path(DATA_CLEAN, "us_industry_productivity_panel.csv")
 
 OUT_DIR <- DATA_CLEAN
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
+
+required_files <- c(IPA_FILE, IN_FILE)
+
+missing_files <- required_files[!file.exists(required_files)]
+
+if (length(missing_files) > 0) {
+  stop("Missing required input files:\n", paste(missing_files, collapse = "\n"))
+}
+
 
 # ------------------------------------------------
 # Helper functions
@@ -162,6 +186,17 @@ us_naics <- us %>%
     by = "industry_key"
   )
 
+
+missing_naics <- us_naics %>%
+  distinct(industry_key, industry, naics_codes_raw) %>%
+  filter(is.na(naics_codes_raw))
+
+if (nrow(missing_naics) > 0) {
+  print(missing_naics)
+  warning("Some ILPA industries do not have a NAICS mapping.")
+} else {
+  message("✓ All ILPA industries matched to a NAICS mapping.")
+}
 # ------------------------------------------------
 # 7) Detailed NAICS long map (2–4 digits)
 # ------------------------------------------------
@@ -183,37 +218,14 @@ write_csv(
   file.path(OUT_DIR, "us_ilpa_naics_map_long.csv")
 )
 
-# ------------------------------------------------
-# 8) NAICS4 mapping
-# ------------------------------------------------
 
-naics4_long <- naics_long %>%
-  mutate(
-    naics4 = if_else(
-      nchar(NAICS_code) == 4,
-      NAICS_code,
-      NA_character_
-    )
-  ) %>%
-  filter(!is.na(naics4)) %>%
-  select(industry, industry_key, naics4) %>%
-  distinct() %>%
-  arrange(industry, naics4)
 
-write_csv(
-  naics4_long,
-  file.path(OUT_DIR, "us_ilpa_naics4_map_long.csv")
+diag_naics <- tibble::tibble(
+  mapped_industries = n_distinct(naics_map$industry_key),
+  naics_long_rows = nrow(naics_long)
 )
+
+print(diag_naics)
 
 message("✓ US ILPA NAICS mapping build complete.")
 message("Files written to: ", normalizePath(OUT_DIR, winslash = "/"))
-
-
-
-
-
-
-
-
-
-

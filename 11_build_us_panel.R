@@ -2,8 +2,8 @@
 # 11_build_us_panel.R
 # ------------------------------------------------------------
 # Purpose:
-# Merge the US ILPA industry panel with US Economic Census
-# concentration data.
+#   Merge the US ILPA industry panel with US Economic Census
+#   concentration data.
 #
 # Main steps:
 #   - load the cleaned ILPA panel with ICT classification
@@ -11,23 +11,27 @@
 #   - map ILPA industries to Census NAICS4 industries
 #   - aggregate Census CR4 and CR8 to ILPA industry-year level
 #     using Census receipts (RCPTOT) as weights
+#   - construct annual concentration series by carrying forward
+#     Census values between Census years
 #   - save the full merged panel
 #   - save the main analysis sample balanced on CR4
 #
 # Inputs:
-#   - dataclean/us_ilpa_ICT_industry_panel_NARROW.csv
-#   - dataclean/us_ilpa_naics_map_long.csv
-#   - dataclean/census_concentration_panel_2002_2022.csv
+#   data/clean/us_ilpa_ICT_industry_panel_NARROW.csv
+#   data/clean/us_ilpa_naics_map_long.csv
+#   data/clean/census_concentration_panel_2002_2022.csv
 #
 # Outputs:
-#   - dataclean/panel_us/panel_US_full_ILPAxCensus_2002_2022.csv
-#   - dataclean/panel_us/panel_US_main_cr4_balanced_2002_2022.csv
+#   data/clean/panel_us/panel_US_full_ILPAxCensus_2002_2022.csv
+#   data/clean/panel_us/panel_US_main_cr4_balanced_2002_2022.csv
 #
 # Notes:
 #   - CR4 is the main concentration measure used in the thesis.
-#   - CR8 is retained in the merged panel for robustness analysis.
-#   - Census concentration is observed in 5-year Census waves and
+#   - CR8 is retained for robustness analysis.
+#   - Census concentration is observed in 5-year waves and
 #     carried forward between Census years.
+#   - Some ILPA industries cannot be mapped to NAICS4 and will
+#     have missing concentration measures in the full panel.
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -41,10 +45,10 @@ suppressPackageStartupMessages({
 # ----------------------------
 # Paths
 # ----------------------------
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
-OUT_DIR    <- file.path(DATA_CLEAN, "panel_us")
+DATA_CLEAN <- here("data", "clean")
+OUT_DIR    <- here("data", "clean", "panel_us")
 
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
@@ -281,7 +285,7 @@ if (nrow(ilpa_conc_year) > expected_max) {
   stop("Too many rows in ilpa_conc_year (possible join explosion).")
 }
 
-#diagbostics delet later 
+
 weight_cov_year <- ilpa_conc_year %>%
   group_by(year) %>%
   summarise(
@@ -316,6 +320,17 @@ write_csv(
   file.path(OUT_DIR, "panel_US_full_ILPAxCensus_2002_2022.csv")
 )
 
+cli::cli_h2("CHECK: CR4 coverage in merged panel")
+
+print(
+  panel_US_full %>%
+    summarise(
+      share_CR4_nonmiss = mean(is.finite(CR4)),
+      share_CR8_nonmiss = mean(is.finite(CR8)),
+      n_industries = n_distinct(industry_key)
+    ),
+  n = Inf
+)
 # ============================================================
 # 6) Build main analysis sample (balanced on CR4)
 # ============================================================
@@ -336,4 +351,38 @@ panel_US_main_cr4_balanced <- panel_US_full %>%
 write_csv(
   panel_US_main_cr4_balanced,
   file.path(OUT_DIR, "panel_US_main_cr4_balanced_2002_2022.csv")
+)
+cli::cli_h2("CHECK: balanced sample structure")
+
+print(
+  panel_US_main_cr4_balanced %>%
+    summarise(
+      n_rows = n(),
+      n_industries = n_distinct(industry_key),
+      n_years = n_distinct(year),
+      min_year = min(year),
+      max_year = max(year)
+    ),
+  n = Inf
+)
+bad_balance <- panel_US_main_cr4_balanced %>%
+  count(industry_key) %>%
+  filter(n != length(YEAR_SEQ))
+
+if (nrow(bad_balance) > 0) {
+  print(bad_balance)
+  stop("Balanced panel is NOT fully balanced.")
+}
+cli::cli_h2("CHECK: CR4 range")
+
+print(
+  panel_US_full %>%
+    summarise(
+      min_CR4 = min(CR4, na.rm = TRUE),
+      p01 = quantile(CR4, 0.01, na.rm = TRUE),
+      p50 = median(CR4, na.rm = TRUE),
+      p99 = quantile(CR4, 0.99, na.rm = TRUE),
+      max_CR4 = max(CR4, na.rm = TRUE)
+    ),
+  n = Inf
 )

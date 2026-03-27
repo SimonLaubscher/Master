@@ -16,12 +16,12 @@
 #   - Exports the table in CSV and LaTeX format
 #
 # Inputs:
-#   - dataclean/panel_eu/panel_common_2003_2020_analysis_strict.rds
-#   - dataclean/panel_us/panel_US_main_cr4_balanced_2002_2022.csv
+#   data/clean/panel_eu/panel_common_2003_2020_analysis_strict.rds
+#   data/clean/panel_us/panel_US_main_cr4_balanced_2002_2022.csv
 #
 # Outputs:
-#   - outputs/tables/Table_3_1_analysis_panels.csv
-#   - outputs/tables/Table_3_1_analysis_panels.tex
+#   output/tables/Table_3_1_analysis_panels.csv
+#   output/tables/Table_3_1_analysis_panels.tex
 #
 # Notes:
 #   - Europe panel reports statistics separately for Germany,
@@ -42,13 +42,13 @@ suppressPackageStartupMessages({
 # 0) PATHS
 # ============================================================
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN   <- file.path(ROOT, "dataclean")
+DATA_CLEAN   <- here("data", "clean")
 PANEL_EU_DIR <- file.path(DATA_CLEAN, "panel_eu")
 PANEL_US_DIR <- file.path(DATA_CLEAN, "panel_us")
 
-OUT_DIR <- file.path(ROOT, "outputs", "tables")
+OUT_DIR <- here("output", "tables")
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)
 
 PATH_EU_MAIN <- file.path(
@@ -130,18 +130,16 @@ tab_us <- us_main %>%
 table_3_1 <- bind_rows(tab_europe, tab_us) %>%
   mutate(
     order_id = case_when(
-      Country == "Germany" ~ 1,
-      Country == "France" ~ 2,
-      Country == "Denmark" ~ 3,
-      Country == "Sweden" ~ 4,
-      Country == "United States" ~ 5,
+      Country == "United States" ~ 1,
+      Country == "Germany" ~ 2,
+      Country == "France" ~ 3,
+      Country == "Denmark" ~ 4,
+      Country == "Sweden" ~ 5,
       TRUE ~ 99
     )
   ) %>%
   arrange(order_id) %>%
   select(-order_id)
-
-print(table_3_1, n = Inf)
 
 # ============================================================
 # 5) EXPORT CSV

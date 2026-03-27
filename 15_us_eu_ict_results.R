@@ -1,22 +1,30 @@
 # ============================================================
 # 15_us_eu_ict_results.R
-#
+# ------------------------------------------------------------
 # Purpose:
-# Construct the main Chapter 5 comparative results for the
-# United States and four European countries (Germany, France,
-# Denmark, Sweden).
+#   Construct the main Chapter 5 comparative results for the
+#   United States and four European countries (Germany, France,
+#   Denmark, Sweden).
 #
 # Main outputs:
-# 1. Labour productivity growth by ICT group and period
-# 2. ICT capital deepening contribution by ICT group and period
-# 3. Top 5 industries by average labour productivity growth
+#   1. Labour productivity growth by ICT group and period
+#   2. ICT capital deepening contribution by ICT group and period
+#   3. Top 5 industries by average labour productivity growth
 #
-# Input data:
-# - US ILPA ICT-classified industry panel
-# - EU KLEMS ICT-classified industry panel
+# Inputs:
+#   data/clean/us_ilpa_ICT_industry_panel_NARROW.csv
+#   data/clean/klems_classified_ICT_C26_ONLY_1997baseline.rds
 #
-# Outputs:
-# - tables and figures for Chapter 5
+# Outputs (output/tables and output/figures):
+#   - 15_top5_industries_lp_growth_full.csv / .tex
+#   - 15_top5_industries_lp_growth_by_period.csv / .tex
+#   - 15_lp_growth_by_ict_group_period.csv / .tex
+#   - 15_ict_contribution_by_group_period.csv / .tex
+#
+# Notes:
+#   - Results are computed using value-added weights.
+#   - ICT classification is based on 1997 baseline definitions.
+#   - Aggregate industries (e.g. TOT_IND) are excluded.
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -33,12 +41,12 @@ suppressPackageStartupMessages({
 # 0) Paths
 # ============================================================
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
-OUT_DIR    <- file.path(ROOT, "outputs")
-OUT_FIG    <- file.path(OUT_DIR, "figures")
-OUT_TAB    <- file.path(OUT_DIR, "tables")
+DATA_CLEAN <- here("data", "clean")
+OUT_DIR    <- here("output")
+OUT_FIG    <- here("output", "figures")
+OUT_TAB    <- here("output", "tables")
 
 dir.create(OUT_FIG, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
@@ -268,6 +276,11 @@ write_csv(
   file.path(OUT_TAB, "13_top5_industries_lp_growth_full.csv")
 )
 
+
+
+# -------------------------
+# Prepare table for LaTeX
+# -------------------------
 top5_full_latex <- top5_full %>%
   arrange(
     factor(country_name, levels = c("United States", "Germany", "France", "Denmark", "Sweden")),
@@ -278,19 +291,35 @@ top5_full_latex <- top5_full %>%
     Country = if_else(row_number() == 1, country_name, "")
   ) %>%
   ungroup() %>%
-  select(
+  transmute(
     Country,
     Industry = industry_name,
-    `Avg. LP growth` = avg_lp_pp
+    `\\makecell{Labor productivity \\\\ growth}` = sprintf("%.2f", avg_lp_pp)
   )
 
+# -------------------------
+# Export LaTeX tabular
+# -------------------------
 top5_full_tex <- knitr::kable(
   top5_full_latex,
   format = "latex",
   booktabs = TRUE,
-  align = c("l", "l", "c"),
-  escape = TRUE
+  align = c("l", "l", "c"),   # ← changed here
+  escape = FALSE
 )
+
+# Make Industry column fixed width so long names wrap nicely
+top5_full_tex <- gsub(
+  "\\\\begin\\{tabular\\}\\{llc\\}",
+  "\\\\begin{tabular}{l p{12.3cm} c}",   
+  top5_full_tex
+)
+
+# Add spacing between country blocks
+top5_full_tex <- gsub("\nGermany &", "\n\\\\addlinespace[0.5em]\nGermany &", top5_full_tex)
+top5_full_tex <- gsub("\nFrance &",  "\n\\\\addlinespace[0.5em]\nFrance &",  top5_full_tex)
+top5_full_tex <- gsub("\nDenmark &", "\n\\\\addlinespace[0.5em]\nDenmark &", top5_full_tex)
+top5_full_tex <- gsub("\nSweden &",  "\n\\\\addlinespace[0.5em]\nSweden &",  top5_full_tex)
 
 writeLines(
   top5_full_tex,
@@ -298,9 +327,14 @@ writeLines(
 )
 
 
+
 # ============================================================
 # 4B) Top 5 industries by average LP growth (by period)
+# Split into one LaTeX table per country
 # ============================================================
+
+country_order <- c("United States", "Germany", "France", "Denmark", "Sweden")
+period_order  <- c(paste0("Pre-", BREAK_YEAR), paste0("Post-", BREAK_YEAR))
 
 top5_period <- df %>%
   filter(is.finite(lp_pp)) %>%
@@ -316,8 +350,8 @@ top5_period <- df %>%
   ungroup() %>%
   mutate(avg_lp_pp = round(avg_lp_pp, 2)) %>%
   arrange(
-    factor(country_name, levels = c("United States", "Germany", "France", "Denmark", "Sweden")),
-    factor(period, levels = c(paste0("Pre-", BREAK_YEAR), paste0("Post-", BREAK_YEAR))),
+    factor(country_name, levels = country_order),
+    factor(period, levels = period_order),
     desc(avg_lp_pp)
   )
 
@@ -327,70 +361,73 @@ write_csv(
   file.path(OUT_TAB, "13_top5_industries_lp_growth_by_period.csv")
 )
 
-# Prepare LaTeX table
-top5_period_latex <- top5_period %>%
-  arrange(
-    factor(country_name, levels = c("United States", "Germany", "France", "Denmark", "Sweden")),
-    factor(period, levels = c(paste0("Pre-", BREAK_YEAR), paste0("Post-", BREAK_YEAR))),
-    desc(avg_lp_pp)
-  ) %>%
-  group_by(country_name, period) %>%
-  mutate(
-    Country = if_else(row_number() == 1, country_name, ""),
-    Period  = if_else(row_number() == 1, as.character(period), "")
-  ) %>%
-  ungroup() %>%
-  select(
-    Country,
-    Period,
-    Industry = industry_name,
-    `Avg. annual LP growth` = avg_lp_pp
-  )
-
-# Generate LaTeX table (regular tabular, not longtable)
-top5_period_tex <- top5_period_latex %>%
-  kbl(
-    format = "latex",
-    booktabs = TRUE,
-    longtable = FALSE,
-    align = c("l", "l", "p{9.3cm}", "r"),
-    escape = TRUE,
-    col.names = c(
-      "Country",
-      "Period",
-      "Industry",
-      "Avg. annual LP growth"
-    )
-  ) %>%
-  kable_styling(
-    font_size = 8,
-    latex_options = c("hold_position")
-  )
-
-# Save LaTeX
-writeLines(
-  as.character(top5_period_tex),
-  file.path(OUT_TAB, "13_top5_industries_lp_growth_by_period.tex")
+# Safe file names
+country_file_map <- c(
+  "United States" = "united_states",
+  "Germany" = "germany",
+  "France" = "france",
+  "Denmark" = "denmark",
+  "Sweden" = "sweden"
 )
 
-# ============================================================
-# 4C) DIAGNOSTIC: Number of industries per group per country #maybe use for appendix table needs adjustment
-# ============================================================
-n_industries <- valid_lp %>%
-  group_by(country_name, ICT_group_baseline, period) %>%
-  summarise(
-    n_industries = n_distinct(industry_code),
-    n_years      = n_distinct(year),
-    .groups = "drop"
-  ) %>%
-  mutate(n_industries = round(n_industries, 0)) %>%
-  arrange(country_name, ICT_group_baseline, period)
+# Labels shown in the LaTeX tables
+period_label_map <- setNames(
+  c("1998--2005", "2006--2021"),
+  c(paste0("Pre-", BREAK_YEAR), paste0("Post-", BREAK_YEAR))
+)
 
-print("Number of industries per group per country-period:")
-print(n_industries, n = Inf)  # Shows ALL rows
-
-write_csv(n_industries, file.path(OUT_TAB, "13_n_industries_per_group.csv"))
-
+for (ctry in country_order) {
+  
+  one_country <- top5_period %>%
+    filter(country_name == ctry) %>%
+    arrange(
+      factor(period, levels = period_order),
+      desc(avg_lp_pp)
+    )
+  
+  one_country_latex <- one_country %>%
+    mutate(period_label = recode(period, !!!period_label_map)) %>%
+    group_by(period) %>%
+    mutate(
+      Period = if_else(row_number() == 1, period_label, "")
+    ) %>%
+    ungroup() %>%
+    transmute(
+      Period,
+      Industry = industry_name,
+      `\\makecell{Labor productivity \\\\ growth}` = sprintf("%.2f", avg_lp_pp)
+    )
+  
+  one_country_tex <- knitr::kable(
+    one_country_latex,
+    format = "latex",
+    booktabs = TRUE,
+    align = c("l", "l", "c"),
+    escape = FALSE
+  )
+  
+  # Set wrapped industry column
+  one_country_tex <- gsub(
+    "\\\\begin\\{tabular\\}\\{llc\\}",
+    "\\\\begin{tabular}{l p{10.2cm} c}",
+    one_country_tex
+  )
+  
+  # Add space before second period block
+  one_country_tex <- gsub(
+    "\n2006--2021 &",
+    "\n\\\\addlinespace[0.5em]\n2006--2021 &",
+    one_country_tex
+  )
+  
+  writeLines(
+    one_country_tex,
+    file.path(
+      OUT_TAB,
+      paste0("13_top5_industries_lp_growth_by_period_", country_file_map[[ctry]], ".tex")
+    )
+  )
+}
 
 
 
@@ -501,7 +538,8 @@ valid_contrib <- df %>%
 
 if (nrow(valid_contrib) == 0) {
   message("No valid ICT contribution data available; skipping ICT contribution table.")
-} else {
+  contrib_group_period <- tibble()
+} else { 
   
   contrib_group_year <- valid_contrib %>%
     group_by(country_name, ICT_group_baseline, year, period) %>%

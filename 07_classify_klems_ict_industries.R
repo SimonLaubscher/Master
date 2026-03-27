@@ -2,24 +2,29 @@
 # 07_classify_klems_ict_industries
 #
 # Purpose:
-#   - Classify industries into ICT-producing (C26), ICT-using, Other
-#   - ICT-using vs Other defined by country-specific median of ICT_intensity_1997
-#   - Industries without a 1997 baseline are flagged as "ICT baseline missing"
+# Classify EU KLEMS industries into ICT-producing, ICT-using, and Other
+# using a 1997 baseline ICT intensity measure.
+#
+# Classification:
+# - ICT-producing: industry C26
+# - ICT-using vs Other: country-specific median split of ICT_intensity_1997
+# - industries without a valid 1997 baseline are flagged as
+#   "ICT baseline missing"
 #
 # Creates:
-#   - ICT_group_baseline (factor)
-#   - ICT_using_dummy (1 = ICT-using, 0 = Other, NA = producing or missing baseline)
-#   - ICT_group_usable (TRUE/FALSE)
-#   - baseline_status (audit trail)
+# - ICT_group_baseline
+# - ICT_using_dummy
+# - ICT_group_usable
+# - baseline_status
 #
 # Input:
-#   - dataclean/klems_panel_full_master_EUonly.rds
+# - data/clean/klems_panel_full_master_EUonly.rds
 #
 # Outputs:
-#   - dataclean/klems_classified_ICT_C26_ONLY_1997baseline.rds
-#   - output/classification/klems_classified_ICT_C26_ONLY_1997baseline.csv
-#   - output/classification/ICT_classification_check_C26_ONLY_1997baseline.csv
-#   - output/classification/ICT_group_shares_by_country.csv
+# - data/clean/klems_classified_ICT_C26_ONLY_1997baseline.rds
+# - data/clean/klems_classified_ICT_C26_ONLY_1997baseline.csv
+# - data/clean/ICT_classification_check_C26_ONLY_1997baseline.csv
+# - data/clean/ICT_group_shares_by_country.csv
 # ================================================================
 
 suppressPackageStartupMessages({
@@ -30,22 +35,24 @@ suppressPackageStartupMessages({
 # ------------------------------------------------------------
 # Paths
 # ------------------------------------------------------------
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+library(here)
 
+DATA_CLEAN <- here("data", "clean")
 
-IN_FILE   <- file.path(DATA_CLEAN, "klems_panel_full_master_EUonly.rds")
+IN_FILE <- file.path(DATA_CLEAN, "klems_panel_full_master_EUonly.rds")
+
 OUT_RDS   <- file.path(DATA_CLEAN, "klems_classified_ICT_C26_ONLY_1997baseline.rds")
 OUT_CSV   <- file.path(DATA_CLEAN, "klems_classified_ICT_C26_ONLY_1997baseline.csv")
 OUT_CHECK <- file.path(DATA_CLEAN, "ICT_classification_check_C26_ONLY_1997baseline.csv")
 OUT_GROUP <- file.path(DATA_CLEAN, "ICT_group_shares_by_country.csv")
 
-
+# Ensure output directory exists
+dir.create(DATA_CLEAN, recursive = TRUE, showWarnings = FALSE)
+# Check required input
 if (!file.exists(IN_FILE)) {
   stop("Input file not found: ", IN_FILE)
 }
-
 # ------------------------------------------------------------
 # 0) Load cleaned EU KLEMS panel
 # ------------------------------------------------------------
@@ -121,6 +128,13 @@ if (any(country_medians_1997$n_ind_for_median < 8)) {
   warning("Some countries have < 8 industries with reliable 1997 baseline. Median split may be unstable.")
 }
 
+expected_countries <- sort(unique(df_ci$country))
+median_countries <- sort(unique(country_medians_1997$country))
+
+if (!identical(expected_countries, median_countries)) {
+  print(median_countries)
+  warning("Not all countries received a valid ICT median.")
+}
 # ------------------------------------------------------------
 # 5) Assign ICT-using vs Other
 # ------------------------------------------------------------
@@ -151,6 +165,14 @@ df_ci <- df_ci %>%
     )
   )
 
+dup_class <- df_ci %>%
+  count(country, industry_clean) %>%
+  filter(n > 1)
+
+if (nrow(dup_class) > 0) {
+  print(dup_class)
+  stop("Duplicate country-industry classifications detected.")
+}
 # ------------------------------------------------------------
 # 6) Join classification back to full panel
 # ------------------------------------------------------------
@@ -165,6 +187,15 @@ df_out <- df %>%
       ),
     by = c("country", "industry_clean")
   )
+
+missing_class <- df_out %>%
+  filter(is.na(ICT_group_baseline)) %>%
+  distinct(country, industry_clean)
+
+if (nrow(missing_class) > 0) {
+  print(missing_class)
+  stop("Some panel observations did not receive an ICT classification.")
+}
 
 # ------------------------------------------------------------
 # 7) Save outputs

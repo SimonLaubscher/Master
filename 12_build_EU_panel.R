@@ -12,15 +12,20 @@
 #   3. Expand KLEMS grouped industries (e.g. C10-C12) to NACE2 parts
 #   4. Merge CompNet concentration measures at the NACE2 level
 #   5. Aggregate concentration to KLEMS industries using revenue weights
-#   6. Construct a balanced industry panel for 2003–2020
+#   6. Construct the merged industry panel for 2003–2020
 #   7. Apply strict completeness requirements for grouped industries
+#
+# Notes:
+#   - HHI_rev from CompNet is used on the 0–10000 scale.
+#   - The final analysis sample is not fully balanced due to data availability
+#     (e.g. missing years or industries in some countries).
 #
 # Final outputs:
 #   panel_common_2003_2020_analysis_strict.rds
 #       -> Main estimation sample used in the thesis
 #
 #   panel_common_2003_2020_baseline.rds
-#       -> Balanced merged panel before analysis restrictions
+#       -> Merged panel before analysis restrictions
 #
 #   panel_base_full.rds
 #       -> Full merged dataset before restricting the time window
@@ -29,9 +34,6 @@
 #       -> Diagnostics on merge coverage and missing concentration data
 # ================================================================
 
-# ----------------------------
-# Libraries
-# ----------------------------
 suppressPackageStartupMessages({
   library(dplyr)
   library(readr)
@@ -43,9 +45,9 @@ suppressPackageStartupMessages({
 # ----------------------------
 # Paths
 # ----------------------------
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+DATA_CLEAN <- here("data", "clean")
 OUT_DIR    <- file.path(DATA_CLEAN, "panel_eu")
 
 dir.create(OUT_DIR, recursive = TRUE, showWarnings = FALSE)

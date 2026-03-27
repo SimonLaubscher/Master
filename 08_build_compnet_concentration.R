@@ -23,7 +23,10 @@
 #   rev_tot_proxy = FV08_nrev_mn * FV08_nrev_sw (proxy for total nominal revenue)
 #
 # Notes:
-#   (A) HHI scaling guard: accepts [0,1] or auto-scales ~[0,10000] -> /10000
+#   (A) HHI scaling:
+#       - detects whether raw HHI is in [0,1] or [0,10000]
+#       - normalizes to [0,1] internally if needed
+#       - final output is stored on the [0,10000] scale
 #   (B) Check key uniqueness BEFORE any de-duplication
 #   (C) Add diagnostics for rev_tot_proxy
 #   (D) Add missing-year listing per country
@@ -39,27 +42,26 @@ suppressPackageStartupMessages({
 # -------------------------
 # Paths
 # -------------------------
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
 
-DATA_RAW   <- file.path(ROOT, "dataraw")
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+library(here)
+
+DATA_RAW   <- here("data", "raw")
+DATA_CLEAN <- here("data", "clean")
 
 FILE_V10 <- file.path(
   DATA_RAW,
-  "20e_firms_weighted_descriptives",
-  "Descriptives",
-  "unconditional_industry2d_20e_weighted.dta"
+  "unconditional_industry2d_20e_weightedV10.dta"
 )
 
 FILE_V9 <- file.path(
   DATA_RAW,
-  "20e_firms_weighted_descriptives V9",
-  "Descriptives",
-  "unconditional_industry2d_20e_weighted.dta"
+  "unconditional_industry2d_20e_weightedV9.dta"
 )
 
+# Ensure output directory exists
 dir.create(DATA_CLEAN, recursive = TRUE, showWarnings = FALSE)
 
+# Check required inputs
 if (!file.exists(FILE_V10)) {
   stop("Input file not found: ", FILE_V10)
 }
@@ -176,11 +178,15 @@ build_annual <- function(path, keep_countries, source_tag) {
   # key uniqueness
   key_unique_or_stop(out, c("country", "year", "NACE2"))
   
-  # ensure HHI is on [0,1] scale
+  # ensure HHI is standardized and returned in 0–10000 scale
   out <- out %>%
     mutate(
-      HHI_rev = check_and_scale_hhi(HHI_rev, "HHI_rev")
+      HHI_rev = check_and_scale_hhi(HHI_rev, "HHI_rev"),  # normalize to 0–1 if needed
+      HHI_rev = HHI_rev * 10000                           # convert to 0–10000 (final scale)
     )
+  if (any(out$HHI_rev < 0 | out$HHI_rev > 10000, na.rm = TRUE)) {
+    stop("HHI_rev outside [0,10000] after scaling.")
+  }
   
   # sanity checks for weights
   if (any(out$FV08_nrev_sw < 0, na.rm = TRUE)) stop("FV08_nrev_sw has negatives (unexpected).")

@@ -1,14 +1,34 @@
 # ============================================================
 # 16_concentration_outputs_5_3.R
-# Chapter 5.3: market concentration
+# ------------------------------------------------------------
+# Purpose:
+#   Construct Chapter 5.3 results on market concentration for
+#   the United States and Europe.
+#
+# Main outputs:
+#   1. Trends in concentration (CR4, CR8, HHI)
+#   2. Balanced panel robustness checks (US)
+#   3. Appendix tables on coverage and concentration levels
 #
 # Inputs:
-#   dataclean/compnet_hybrid_annual.csv
-#   dataclean/census_concentration_panel_2002_2022.csv
+#   data/clean/compnet_hybrid_annual.csv
+#   data/clean/census_concentration_panel_2002_2022.csv
 #
-# Outputs:
-#   outputs/figures/
-#   outputs/tables/
+# Outputs (output/tables and output/figures):
+#   - tab_531_us_cr4_naics4.csv
+#   - tab_531_us_cr8_naics4.csv
+#   - fig_531_us_cr4_mean_median_naics4_*.png
+#   - fig_531_eu_hhi_mean_median_2003_2020.png
+#   - tab_A1_cr4_cr8_full.tex
+#   - tab_A2_balanced.tex
+#   - tab_A3_eu_hhi_ends.tex
+#   - tab_A4a_coverage_2003_2011.tex
+#   - tab_A4b_coverage_2012_2020.tex
+#
+# Notes:
+#   - US concentration measured using CR4 and CR8.
+#   - EU concentration measured using revenue-based HHI.
+#   - Balanced panel restricts to industries observed in all census years.
 # ============================================================
 
 suppressPackageStartupMessages({
@@ -22,28 +42,18 @@ suppressPackageStartupMessages({
 # 0) Paths
 # ============================================================
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
-OUT_DIR    <- file.path(ROOT, "outputs")
-OUT_FIG    <- file.path(OUT_DIR, "figures")
-OUT_TAB    <- file.path(OUT_DIR, "tables")
+DATA_CLEAN <- here("data", "clean")
+OUT_DIR    <- here("output")
+OUT_FIG    <- here("output", "figures")
+OUT_TAB    <- here("output", "tables")
 
 dir.create(OUT_FIG, recursive = TRUE, showWarnings = FALSE)
 dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 
 EU_FILE <- file.path(DATA_CLEAN, "compnet_hybrid_annual.csv")
 US_FILE <- file.path(DATA_CLEAN, "census_concentration_panel_2002_2022.csv")
-
-if (!file.exists(EU_FILE)) {
-  stop("Missing CompNet hybrid panel: ", EU_FILE,
-       "\nRun the CompNet build script first.")
-}
-
-if (!file.exists(US_FILE)) {
-  stop("Missing US Census concentration panel: ", US_FILE,
-       "\nRun the Census concentration build script first.")
-}
 
 # ============================================================
 # 1) Settings
@@ -81,7 +91,7 @@ us <- read_csv(US_FILE, show_col_types = FALSE) %>%
     NAICS_len = as.integer(NAICS_len),
     NAICS_key = as.character(NAICS_key),
     CR4       = as.numeric(CR4),
-    CR8       = as.numeric(CR8),
+    CR8       = as.numeric(CR8)
   )
 
 # ============================================================
@@ -92,6 +102,14 @@ dup_us <- us %>%
   count(year, NAICS_key, NAICS_len) %>%
   filter(n > 1)
 
+dup_eu <- eu %>%
+  count(country, year, NACE2) %>%
+  filter(n > 1)
+
+if (nrow(dup_eu) > 0) {
+  stop("EU data contains duplicate (country, year, NACE2) rows.")
+}
+
 if (nrow(dup_us) > 0) {
   stop("US data contains duplicate (year, NAICS_key, NAICS_len) rows.")
 }
@@ -100,8 +118,8 @@ if (any(is.finite(us$CR4) & (us$CR4 < 0 | us$CR4 > 100))) {
   stop("US CR4 contains values outside [0, 100].")
 }
 
-if (any(is.finite(eu$HHI_rev) & (eu$HHI_rev < 0 | eu$HHI_rev > 1))) {
-  stop("EU HHI_rev contains values outside [0, 1].")
+if (any(is.finite(eu$HHI_rev) & (eu$HHI_rev < 0 | eu$HHI_rev > 10000))) {
+  stop("EU HHI_rev contains values outside [0, 10,000].")
 }
 
 # ============================================================
@@ -196,6 +214,7 @@ p_us_cr4_bottom <- us_trend %>%
   theme(
     panel.grid.minor = element_blank(),
     legend.position = "bottom",
+    legend.text = element_text(size = 11),
     legend.direction = "horizontal",
     legend.box = "horizontal"
   ) +
@@ -232,8 +251,8 @@ eu_trend_year <- eu %>%
   group_by(country, year) %>%
   summarise(
     n_industries = n_distinct(NACE2),
-    mean_HHI = mean(HHI_rev, na.rm = TRUE) * 10000,
-    med_HHI  = median(HHI_rev, na.rm = TRUE) * 10000,
+    mean_HHI = mean(HHI_rev, na.rm = TRUE), 
+    med_HHI  = median(HHI_rev, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   arrange(country, year)
@@ -255,12 +274,21 @@ p_eu_hhi <- eu_trend_year %>%
       mean_HHI = "Mean",
       med_HHI  = "Median"
     ),
-    country = factor(country, levels = c("DE", "DK", "FR", "SE"))
+    country = factor(country, levels = c("DE", "FR", "DK", "SE"))
   ) %>%
   ggplot(aes(x = year, y = HHI, linetype = stat)) +
   geom_line(linewidth = 0.9, color = "black") +
   geom_point(aes(shape = stat), size = 1.8, color = "black") +
-  facet_wrap(~country, ncol = 2) +
+  facet_wrap(
+    ~country,
+    ncol = 2,
+    labeller = as_labeller(c(
+      DE = "Germany",
+      FR = "France",
+      DK = "Denmark",
+      SE = "Sweden"
+    ))
+  ) +
   scale_linetype_manual(values = c("Mean" = "solid", "Median" = "dashed")) +
   scale_shape_manual(values = c("Mean" = 16, "Median" = 17)) +
   scale_x_continuous(breaks = c(2003, 2005, 2010, 2015, 2020)) +
@@ -274,7 +302,14 @@ p_eu_hhi <- eu_trend_year %>%
   theme(
     panel.grid.minor = element_blank(),
     legend.position = "bottom",
-    strip.text = element_text(face = "bold")
+    legend.text = element_text(size = 11),
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    strip.text = element_text(face = "bold", size = 11)
+  ) +
+  guides(
+    linetype = guide_legend(nrow = 1, keywidth = 2.2),
+    shape = guide_legend(nrow = 1)
   )
 
 save_plot(
@@ -312,7 +347,7 @@ kable(us_full_trends,
       digits = 1,
       format = "latex",
       booktabs = TRUE,
-      col.names = c("Year", "Mean CR4", "Median CR4", "Mean CR8", "Median CR8", "Cov.")) %>%
+      col.names = c("Year", "Mean CR4", "Median CR4", "Mean CR8", "Median CR8", "Coverage")) %>%
   cat(file = file.path(OUT_TAB, "tab_A1_cr4_cr8_full.tex"))
 
 # A2) Balanced panel (144 industries, all 5 years)
@@ -345,16 +380,32 @@ kable(us_balanced_trend,
 
 
 # ============================================================
+# EU HHI Tables (Appendix)
+# ============================================================
+
+country_labels <- c(
+  DE = "Germany",
+  FR = "France",
+  DK = "Denmark",
+  SE = "Sweden"
+)
+
+country_order <- c("Germany", "France", "Denmark", "Sweden")
+
+# ============================================================
 # EU HHI Table: Clean aggregate trends by country (Appendix)
 # ============================================================
 
 eu_hhi_ends <- eu_trend_year %>%
   filter(year %in% c(2003, 2020)) %>%
   mutate(
+    country = recode(country, !!!country_labels),
+    country = factor(country, levels = country_order),
     mean_HHI = round(mean_HHI, 0),
     med_HHI  = round(med_HHI, 0),
     year = as.character(year)
   ) %>%
+  arrange(country, year) %>%
   select(country, year, mean_HHI, med_HHI, n_industries) %>%
   pivot_wider(
     names_from = year,
@@ -365,7 +416,8 @@ eu_hhi_ends <- eu_trend_year %>%
     country,
     `2003_mean_HHI`, `2003_med_HHI`, `2003_n_industries`,
     `2020_mean_HHI`, `2020_med_HHI`, `2020_n_industries`
-  )
+  ) %>%
+  mutate(country = as.character(country))
 
 tab_A3_tex <- eu_hhi_ends %>%
   rename(
@@ -393,114 +445,59 @@ writeLines(
 # ============================================================
 # EU HHI Table: Industry Coverage (Appendix)
 # ============================================================
+
 # ============================================================
 # Table A4a: 2003-2011 (Early Period)
 # ============================================================
 industry_a <- eu_trend_year %>%
   filter(year <= 2011) %>%
+  mutate(
+    country = recode(country, !!!country_labels),
+    country = factor(country, levels = country_order)
+  ) %>%
   select(country, year, n_industries) %>%
   distinct() %>%
-  pivot_wider(names_from = year, values_from = n_industries, values_fill = NA) %>%
-  arrange(country)
+  arrange(country, year) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = n_industries,
+    values_fill = NA
+  ) %>%
+  mutate(country = as.character(country))
 
-kable(industry_a, 
-      format = "latex", 
-      booktabs = TRUE, 
-      escape = FALSE,
-      col.names = c("Country", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011")) %>%
+kable(
+  industry_a,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  col.names = c("Country", "2003", "2004", "2005", "2006", "2007", "2008", "2009", "2010", "2011")
+) %>%
   cat(file = file.path(OUT_TAB, "tab_A4a_coverage_2003_2011.tex"))
 
 # ============================================================
-# Table A4b: 2012-2020 (Late Period)  
+# Table A4b: 2012-2020 (Late Period)
 # ============================================================
 industry_b <- eu_trend_year %>%
   filter(year >= 2012) %>%
+  mutate(
+    country = recode(country, !!!country_labels),
+    country = factor(country, levels = country_order)
+  ) %>%
   select(country, year, n_industries) %>%
   distinct() %>%
-  pivot_wider(names_from = year, values_from = n_industries, values_fill = NA) %>%
-  arrange(country)
+  arrange(country, year) %>%
+  pivot_wider(
+    names_from = year,
+    values_from = n_industries,
+    values_fill = NA
+  ) %>%
+  mutate(country = as.character(country))
 
-kable(industry_b, 
-      format = "latex", 
-      booktabs = TRUE, 
-      escape = FALSE,
-      col.names = c("Country", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020")) %>%
+kable(
+  industry_b,
+  format = "latex",
+  booktabs = TRUE,
+  escape = FALSE,
+  col.names = c("Country", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019", "2020")
+) %>%
   cat(file = file.path(OUT_TAB, "tab_A4b_coverage_2012_2020.tex"))
-
-
-
-#delet from here onwards?
-# ============================================================
-# 6) Cross-industry concentration 
-# ============================================================
-
-# ---- EU: top 10 industries by average HHI ----
-eu_top_hhi <- eu %>%
-  filter(is.finite(HHI_rev)) %>%
-  group_by(country, NACE2) %>%
-  summarise(
-    mean_HHI = mean(HHI_rev, na.rm = TRUE) * 10000,
-    .groups = "drop"
-  ) %>%
-  group_by(country) %>%
-  slice_max(mean_HHI, n = TOP_N, with_ties = FALSE) %>%
-  ungroup() %>%
-  arrange(country, desc(mean_HHI))
-
-write_csv(
-  eu_top_hhi,
-  file.path(OUT_TAB, "tab_532_eu_top_industries_by_mean_hhi.csv")
-)
-
-# ---- US: top 10 industries by average CR4 ----
-us_top <- us_L %>%
-  filter(is.finite(CR4)) %>%
-  group_by(NAICS_key) %>%
-  summarise(
-    mean_CR4 = mean(CR4, na.rm = TRUE),
-    LABEL    = dplyr::first(na.omit(LABEL)),
-    .groups = "drop"
-  ) %>%
-  slice_max(mean_CR4, n = TOP_N, with_ties = FALSE) %>%
-  arrange(desc(mean_CR4))
-
-write_csv(
-  us_top,
-  file.path(OUT_TAB, paste0("tab_532_us_top_industries_by_mean_cr4_naics", PLOT_NAICS_LEN, ".csv"))
-)
-
-
-
-
-
-library(kableExtra)
-library(dplyr)
-
-# ============================================================
-# Table A6: EU Top 10 Industries by HHI, 2020 ONLY
-# ============================================================
-eu_2020 <- eu %>%
-  filter(year == 2020) %>%
-  group_by(country, NACE_key) %>%
-  slice_max(HHI, n = 1) %>%
-  slice_head(n = 10) %>%  # Top 10 across countries
-  ungroup()
-
-kable(eu_2020[, c("country", "NACE_key", "HHI")], 
-      col.names = c("Country", "Industry", "HHI"),
-      format = "latex", digits = 0, booktabs = TRUE, escape = FALSE) %>%
-  row_spec(0, bold = TRUE) %>%
-  cat(file = file.path(OUT_TAB, "tab_A6_eu_top_hhi.tex"))
-
-# ============================================================
-# Table A7: US Top 10 Industries by CR4, 2022 ONLY
-# ============================================================
-us_2022 <- us %>%
-  filter(year == 2022) %>%
-  slice_max(CR4, n = 10)
-
-kable(us_2022[, c("NAICS_key", "CR4")], 
-      col.names = c("Industry", "CR4"),
-      format = "latex", digits = 1, booktabs = TRUE, escape = FALSE) %>%
-  row_spec(0, bold = TRUE) %>%
-  cat(file = file.path(OUT_TAB, "tab_A7_us_top_cr4.tex"))

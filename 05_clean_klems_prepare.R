@@ -1,27 +1,38 @@
 # ================================================================
 # 05_clean_klems_prepare
-# EU KLEMS (Growth Accounts Basic) – thesis countries, grouped industries
 #
-# Core:
-#   - Convert LP1 growth + LP1 contributions from percent/pp to log-units (Δln) ONCE.
-#   - Keep original percent/pp versions with _pp suffix for traceability.
-#   - Construct ICT intensity proxy (index ratio) and exact 1997 baseline.
+# Purpose:
+# Clean EU KLEMS Growth Accounts data for the thesis countries and
+# construct the grouped-industry panel used in the European analysis.
+#
+# Core steps:
+# - convert LP1 growth and LP1 contribution variables from percent/pp
+#   to log units (Δln) once
+# - retain original percent/pp versions with _pp suffix for traceability
+# - construct an ICT intensity proxy using CAPICT_QI / CAP_QI
+# - construct exact 1997 ICT baseline variables
 #
 # Baseline variables created:
-#   - ICT_intensity_1997  : exact 1997 value
-#   - ICT_intensity_base  : baseline ICT intensity, set equal to ICT_intensity_1997
+# - ICT_intensity_1997 : exact 1997 ICT intensity proxy
+# - ICT_intensity_base : baseline ICT intensity, set equal to ICT_intensity_1997
 #
-# Note:
-#   - industries without a 1997 ICT intensity remain missing here
-#   - these can be dropped later at the classification stage if needed
+# Notes:
+# - industries without a 1997 ICT intensity remain missing here
+# - these industries can be excluded later at the classification stage
+# - U.S. observations are retained only for aggregate comparison series
 #
-# Inputs:
-#   - dataraw/growth_accounts.rds
+# Input:
+# - data/raw/growth_accounts.rds
 #
 # Outputs:
-#   - dataclean/klems_clean_total.rds
-#   - dataclean/klems_panel_full_master_EUonly.rds
-# ================================================
+# - data/clean/klems_clean_total.rds
+# - data/clean/klems_panel_full_master_EUonly.rds
+# Unit of observation:
+# - country-year-industry for both outputs
+# Coverage:
+# - totals file: US, DE, FR, SE, DK
+# - EU panel file: DE, FR, SE, DK
+# ================================================================
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -31,17 +42,20 @@ suppressPackageStartupMessages({
 # ------------------------------------------------
 # Paths
 # ------------------------------------------------
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
 
-DATA_RAW   <- file.path(ROOT, "dataraw")
-DATA_CLEAN <- file.path(ROOT, "dataclean")
+library(here)
+
+DATA_RAW   <- here("data", "raw")
+DATA_CLEAN <- here("data", "clean")
 
 IN_FILE     <- file.path(DATA_RAW, "growth_accounts.rds")
 OUT_TOTAL   <- file.path(DATA_CLEAN, "klems_clean_total.rds")
 OUT_EU_ONLY <- file.path(DATA_CLEAN, "klems_panel_full_master_EUonly.rds")
 
+# Ensure output directory exists
 dir.create(DATA_CLEAN, recursive = TRUE, showWarnings = FALSE)
 
+# Check required input
 if (!file.exists(IN_FILE)) {
   stop("Input file not found: ", IN_FILE)
 }
@@ -51,6 +65,13 @@ if (!file.exists(IN_FILE)) {
 # ------------------------------------------------
 df <- readRDS(IN_FILE) %>%
   mutate(year = as.integer(year))
+
+must_have_id <- c("geo_code", "nace_r2_code", "nace_r2_name", "year", "var", "value")
+missing_id <- setdiff(must_have_id, names(df))
+
+if (length(missing_id) > 0) {
+  stop("Missing required raw KLEMS columns: ", paste(missing_id, collapse = ", "))
+}
 
 # ------------------------------------------------
 # 2) Check key structure before reshape
@@ -148,6 +169,18 @@ df_panel <- df_wide %>%
   filter(country %in% c("DE", "FR", "SE", "DK")) %>%
   filter(industry %in% keep_industries) %>%
   mutate(industry_clean = industry)
+
+if (nrow(df_panel) == 0) {
+  stop("EU KLEMS grouped panel is empty after filtering.")
+}
+
+country_check <- sort(unique(df_panel$country))
+expected_countries <- sort(c("DE", "FR", "SE", "DK"))
+
+if (!identical(country_check, expected_countries)) {
+  print(country_check)
+  warning("Filtered EU panel countries differ from expected set: DE, FR, SE, DK.")
+}
 
 # ------------------------------------------------
 # 9) ICT intensity proxy + exact 1997 baseline

@@ -1,27 +1,27 @@
 # ============================================================
 # 14_aggregate_lp_analysis.R
+# ------------------------------------------------------------
 # Purpose:
-# Construct and compare aggregate labor productivity across
-# selected countries (US, Germany, France, Denmark, Sweden).
+#   Construct and compare aggregate labor productivity across
+#   selected countries (US, Germany, France, Denmark, Sweden).
 #
 # Steps:
-# 1. Load EU KLEMS aggregate productivity growth (TOT_IND)
-# 2. Load US aggregate productivity growth (re-aggregated ILPA)
-# 3. Restrict to common sample period across countries
-# 4. Construct productivity index (base year = first overlap year)
-# 5. Produce Figure 5.1 (productivity index)
-# 6. Compute Table 5.1 (average growth by period)
-# 7. Export figure and LaTeX table
+#   1. Load EU KLEMS aggregate productivity growth (TOT_IND)
+#   2. Load US aggregate productivity growth (re-aggregated ILPA)
+#   3. Restrict to common sample period across countries
+#   4. Construct productivity index (base year = first overlap year)
+#   5. Produce Figure 5.1 (productivity index)
+#   6. Compute Table 5.1 (average growth by period)
+#   7. Export figure and LaTeX table
 #
-# Data sources:
-# - EU KLEMS (LP1_G, TOT_IND)
-# - BEA–BLS ILPA (re-aggregated, excluding government)
+# Inputs:
+#   data/clean/klems_clean_total.rds
+#   data/clean/us_TOTIND_exgov_growth.csv
 #
-# Output:
-# - fig_5_1_lp_index_classic.png
-# - table_5_1_LP_growth_periods.csv
-# - table_5_1_LP_growth_periods.tex
-#
+# Outputs:
+#   output/figures/fig_5_1_lp_index_classic.png
+#   output/tables/table_5_1_LP_growth_periods.csv
+#   output/tables/table_5_1_LP_growth_periods.tex
 # ============================================================
 suppressPackageStartupMessages({
   library(dplyr)
@@ -36,18 +36,16 @@ suppressPackageStartupMessages({
 # 0) Paths
 # ============================================================
 
-ROOT <- "C:/Users/Simon Laubscher/OneDrive - Universität Zürich UZH/Desktop/Masterarbeit Code/Replication"
+library(here)
 
-DATA_CLEAN <- file.path(ROOT, "dataclean")
-OUT_FIG    <- file.path(ROOT, "outputs", "figures")
-OUT_TAB    <- file.path(ROOT, "outputs", "tables")
+DATA_CLEAN <- here("data", "clean")
+OUT_FIG    <- here("output", "figures")
+OUT_TAB    <- here("output", "tables")
 
+dir.create(OUT_FIG, recursive = TRUE, showWarnings = FALSE)
+dir.create(OUT_TAB, recursive = TRUE, showWarnings = FALSE)
 
-dir.create(OUT_FIG,  recursive = TRUE, showWarnings = FALSE)
-dir.create(OUT_TAB,  recursive = TRUE, showWarnings = FALSE)
-
-
-EU_TOTAL_RDS <- file.path(DATA_CLEAN, "klems_clean_total.rds")
+EU_TOTAL_RDS  <- file.path(DATA_CLEAN, "klems_clean_total.rds")
 US_REAGG_PATH <- file.path(DATA_CLEAN, "us_TOTIND_exgov_growth.csv")
 
 stopifnot(
@@ -243,7 +241,7 @@ plot_data <- all_lp %>%
   )
 
 p_classic <- ggplot(plot_data, aes(x = year, y = lp_index, color = country)) +
-  geom_line(linewidth = 1.2,alpha = 0.9) +
+  geom_line(linewidth = 1.2, alpha = 0.9) +
   scale_color_manual(values = c(
     "United States" = "black",
     "Germany"       = "#1b9e77",
@@ -259,7 +257,8 @@ p_classic <- ggplot(plot_data, aes(x = year, y = lp_index, color = country)) +
   theme_thesis() +
   guides(color = guide_legend(nrow = 1)) +
   theme(
-    legend.position = "bottom"
+    legend.position = "bottom",
+    legend.text = element_text(size = 12)   
   )
 ggsave(
   filename = file.path(OUT_FIG, "fig_5_1_lp_index_classic.png"),
